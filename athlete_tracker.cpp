@@ -103,17 +103,18 @@ int main(int argc, char* argv[]) {
         // Define a region of interest (ROI) for tracking        
         if (!athlete_detected) {
             if (autodetect) {
-                // initalize the object detector
-                dnn::Net object_detector = dnn::readNetFromCaffe(MODEL_PROTOTXT, MODEL_MODEL);
                 int image_height = frame.rows;
                 int image_width = frame.cols;
 
+                // initialize the object detector
+                dnn::Net object_detector = dnn::readNetFromCaffe(MODEL_PROTOTXT, MODEL_MODEL);
+                
                 // Create a blob that will be passed to object detection model
                 Mat blob = dnn::blobFromImage(frame, SCALE, Size(image_width, image_height), 150);
                 object_detector.setInput(blob);
                 Mat detections = object_detector.forward();
 
-                // Process the output to extract object detections
+                // Process the output to extract object detections. We only want the one with the highest confidence
                 Mat detectionMat(detections.size[2], detections.size[3], CV_32F, detections.ptr<float>());
                 for (int i = 0; i < min(MAX_N_DETECTIONS, detectionMat.rows); ++i) {
                     float confidence = detectionMat.at<float>(i, 2);
