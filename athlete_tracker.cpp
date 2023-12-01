@@ -10,7 +10,8 @@
 #define VIDEO_FILE "../../input/ingebrigsten_munich_2022.mp4"
 #define MODEL_PROTOTXT "../../model/MobileNetSSD_deploy.prototxt"
 #define MODEL_MODEL "../../model/MobileNetSSD_deploy.caffemodel"
-#define SCALE (1 / 127.5)  // scale for image color values when creating a blob
+#define MODEL_MEAN 127.5  // mean substraction value for model
+#define MODEL_SCALE (1 / 127.5)  // scale for image color values when creating a blob
 #define MAX_N_DETECTIONS 1  // maximum number of object detections per frame
 
 using namespace std;
@@ -67,6 +68,7 @@ int main(int argc, char* argv[]) {
     float min_confidence = 0.9;
     if (vm.count("confidence")) {
         min_confidence = vm["confidence"].as<float>();
+        cout << "Minimum confidence for athlete detection is " << min_confidence << endl;
     }
 
     // Open the input file
@@ -114,7 +116,7 @@ int main(int argc, char* argv[]) {
                 dnn::Net object_detector = dnn::readNetFromCaffe(MODEL_PROTOTXT, MODEL_MODEL);
                 
                 // Create a blob that will be passed to object detection model
-                Mat blob = dnn::blobFromImage(frame, SCALE, Size(frame_width, frame_height), 150);
+                Mat blob = dnn::blobFromImage(frame, MODEL_SCALE, Size(frame_width, frame_height), MODEL_MEAN, true);
                 object_detector.setInput(blob);
                 Mat detections = object_detector.forward();
 
