@@ -132,7 +132,8 @@ int main(int argc, char* argv[]) {
                 cv::imshow("Cropped", cropped_frame);
 
                 // Create a blob that will be passed to object detection model
-                Mat blob = dnn::blobFromImage(cropped_frame, MODEL_SCALE, Size(cropped_frame.cols, cropped_frame.rows), MODEL_MEAN, false);
+                // Mat blob = dnn::blobFromImage(cropped_frame, MODEL_SCALE, Size(cropped_frame.cols, cropped_frame.rows), MODEL_MEAN, true);
+                Mat blob = dnn::blobFromImage(frame, MODEL_SCALE, Size(frame_width, frame_height), MODEL_MEAN, true);
                 object_detector.setInput(blob);
                 Mat detections = object_detector.forward();
 
@@ -144,6 +145,7 @@ int main(int argc, char* argv[]) {
                     float confidence = detectionMat.at<float>(i, 2);
                     string label = classes[static_cast<int>(detectionMat.at<float>(i, 1))];
 
+                    cout << "Detected class " << label << " with confidence " << confidence << endl;
                     if (label == "person" && confidence > min_confidence) {  // Adjust the confidence threshold as needed
 
                         cout << "Athlete detected with confidence " << confidence << endl;
