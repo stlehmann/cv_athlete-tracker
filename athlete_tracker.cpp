@@ -26,6 +26,7 @@ string classes[21] = {
     "sofa", "train", "tvmonitor"
 };
 
+
 int main(int argc, char* argv[]) {
     
     // flag to enable autodetection of the athlete
@@ -105,6 +106,21 @@ int main(int argc, char* argv[]) {
             cout << "Video has ended.";
             break;
         }
+
+        int resized_height = 300;
+        float aspect_ratio = static_cast<float>(resized_height) / static_cast<float>(frame_height);
+        int resized_width = int(static_cast<float>(frame_width) * aspect_ratio);
+
+        // resize frame to 300px height
+        cv::Mat resized_frame;
+        cv::resize(frame, resized_frame, Size(resized_width, resized_height));
+
+        // keep aspect ratio but crop the x axis to 300px 
+        cv::Rect cropped_rect(resized_frame.cols - 300, 0, 300, 300);
+        cv::Mat cropped_frame = resized_frame(cropped_rect);
+
+        frame = cropped_frame;
+        cout << "Frame width: " << frame.cols << "px, height: " << frame.rows << "px" << endl;
                 
         // Define a region of interest (ROI) for tracking        
         if (!athlete_detected) {
@@ -115,25 +131,9 @@ int main(int argc, char* argv[]) {
                 // initialize the object detector
                 dnn::Net object_detector = dnn::readNetFromCaffe(MODEL_PROTOTXT, MODEL_MODEL);
                 
-                int resized_height = 300;
-                float aspect_ratio = static_cast<float>(resized_height) / static_cast<float>(frame_height);
-                int resized_width = int(static_cast<float>(frame_width) * aspect_ratio);
-                // cout << "Resize height: " << resized_height << "px, width: " << resized_width << "px" << endl;
-
-                // resize frame to 300px height
-                cv::Mat resized_frame;
-                cv::resize(frame, resized_frame, Size(resized_width, resized_height));
-                cv::imshow("Resized", resized_frame);
-
-                // crop width
-                cv::Rect cropped_rect(resized_frame.cols - 300, 0, 300, 300);
-                // cout << "Rect: x=" << cropped_rect.x << ", y=" << cropped_rect.y << ", w=" << cropped_rect.width << ", h=" << cropped_rect.height << endl;
-                cv::Mat cropped_frame = resized_frame(cropped_rect);
-                cv::imshow("Cropped", cropped_frame);
-
                 // Create a blob that will be passed to object detection model
-                // Mat blob = dnn::blobFromImage(cropped_frame, MODEL_SCALE, Size(cropped_frame.cols, cropped_frame.rows), MODEL_MEAN, true);
-                Mat blob = dnn::blobFromImage(frame, MODEL_SCALE, Size(frame_width, frame_height), MODEL_MEAN, true);
+                Mat blob = dnn::blobFromImage(frame, MODEL_SCALE, Size(300, 300), MODEL_MEAN, false);
+                /// Mat blob = dnn::blobFromImage(frame, MODEL_SCALE, Size(frame_width, frame_height), MODEL_MEAN, true);
                 object_detector.setInput(blob);
                 Mat detections = object_detector.forward();
 
@@ -154,10 +154,10 @@ int main(int argc, char* argv[]) {
                         athlete_detected = true;
 
                         // extract all four corners of the bounding box
-                        int left = static_cast<int>(detectionMat.at<float>(i, 3) * frame_width);
-                        int top = static_cast<int>(detectionMat.at<float>(i, 4) * frame_height);
-                        int right = static_cast<int>(detectionMat.at<float>(i, 5) * frame_width);
-                        int bottom = static_cast<int>(detectionMat.at<float>(i, 6) * frame_height);
+                        int left = static_cast<int>(detectionMat.at<float>(i, 3) * frame.cols);
+                        int top = static_cast<int>(detectionMat.at<float>(i, 4) * frame.rows);
+                        int right = static_cast<int>(detectionMat.at<float>(i, 5) * frame.cols);
+                        int bottom = static_cast<int>(detectionMat.at<float>(i, 6) * frame.rows);
 
                         // Initialize the tracker rectangle
                         tracker_drect = dlib::drectangle(left, top, right, bottom);
