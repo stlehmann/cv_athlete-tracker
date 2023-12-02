@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
 
                     if (label == "person" && confidence > min_confidence) {  // Adjust the confidence threshold as needed
 
-                        cout << "Athlete detected with confidence " << confidence << endl;
+                        cout << "Athlete " << i << " detected with confidence " << confidence << endl;
                         
                         // extract all four corners of the bounding box, rescale to original size of the frame
                         int left = static_cast<int>((detectionMat.at<float>(i, 3) * cropped_frame.cols + cropped_left) / aspect_ratio);
