@@ -12,7 +12,6 @@
 #define MODEL_MODEL "../../model/MobileNetSSD_deploy.caffemodel"
 #define MODEL_MEAN 127.5  // mean substraction value for model
 #define MODEL_SCALE (1 / 127.5)  // scale for image color values when creating a blob
-#define MAX_N_DETECTIONS 1  // maximum number of object detections per frame
 
 using namespace std;
 using namespace cv;
@@ -136,13 +135,12 @@ int main(int argc, char* argv[]) {
 
                 // Process the output to extract object detections. We only want the one with the highest confidence
                 Mat detectionMat(detections.size[2], detections.size[3], CV_32F, detections.ptr<float>());
-                for (int i = 0; i < min(MAX_N_DETECTIONS, detectionMat.rows); ++i) {
+                for (int i = 0; i < detectionMat.rows; ++i) {
 
                     // extract confidence and label from detection matrix
                     float confidence = detectionMat.at<float>(i, 2);
                     string label = classes[static_cast<int>(detectionMat.at<float>(i, 1))];
 
-                    cout << "Detected class " << label << " with confidence " << confidence << endl;
                     if (label == "person" && confidence > min_confidence) {  // Adjust the confidence threshold as needed
 
                         cout << "Athlete detected with confidence " << confidence << endl;
@@ -150,7 +148,7 @@ int main(int argc, char* argv[]) {
                         // set flag that athlete has been detected, object detector won't be triggered again
                         athlete_detected = true;
 
-                        // extract all four corners of the bounding box
+                        // extract all four corners of the bounding box, rescale to original size of the frame
                         int left = static_cast<int>((detectionMat.at<float>(i, 3) * cropped_frame.cols + cropped_left) / aspect_ratio);
                         int top = static_cast<int>(detectionMat.at<float>(i, 4) * cropped_frame.rows / aspect_ratio);
                         int right = static_cast<int>((detectionMat.at<float>(i, 5) * cropped_frame.cols + cropped_left) / aspect_ratio);
