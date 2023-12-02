@@ -185,7 +185,11 @@ int main(int argc, char* argv[]) {
                     // Get the tracking result
                     dlib::rectangle drect = trackers[i].get_position();
                     tracked_rects[i] = drect;
-                    
+
+                    // crop athlete for further processing
+                    cv::Mat cropped_athlete = frame(cv::Rect(drect.left(), drect.top(), drect.width(), drect.height()));
+                    cv::imshow("Athlete" + to_string(i + 1), cropped_athlete);
+
                     // Draw a rectangle around the tracked object
                     cv::rectangle(
                         frame,
