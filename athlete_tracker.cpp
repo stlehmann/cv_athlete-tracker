@@ -115,13 +115,11 @@ int main(int argc, char* argv[]) {
         cv::Mat resized_frame;
         cv::resize(frame, resized_frame, Size(resized_width, resized_height));
 
-        // keep aspect ratio but crop the x axis to 300px 
-        cv::Rect cropped_rect(resized_frame.cols - 300, 0, 300, 300);
+        // keep aspect ratio but crop the x axis to 300px
+        int cropped_left = resized_frame.cols - 300;
+        cv::Rect cropped_rect(cropped_left, 0, 300, 300);
         cv::Mat cropped_frame = resized_frame(cropped_rect);
-
-        frame = cropped_frame;
-        cout << "Frame width: " << frame.cols << "px, height: " << frame.rows << "px" << endl;
-                
+               
         // Define a region of interest (ROI) for tracking        
         if (!athlete_detected) {
 
@@ -132,8 +130,7 @@ int main(int argc, char* argv[]) {
                 dnn::Net object_detector = dnn::readNetFromCaffe(MODEL_PROTOTXT, MODEL_MODEL);
                 
                 // Create a blob that will be passed to object detection model
-                Mat blob = dnn::blobFromImage(frame, MODEL_SCALE, Size(300, 300), MODEL_MEAN, false);
-                /// Mat blob = dnn::blobFromImage(frame, MODEL_SCALE, Size(frame_width, frame_height), MODEL_MEAN, true);
+                Mat blob = dnn::blobFromImage(cropped_frame, MODEL_SCALE, Size(cropped_frame.cols, cropped_frame.rows), MODEL_MEAN, false);
                 object_detector.setInput(blob);
                 Mat detections = object_detector.forward();
 
@@ -154,13 +151,14 @@ int main(int argc, char* argv[]) {
                         athlete_detected = true;
 
                         // extract all four corners of the bounding box
-                        int left = static_cast<int>(detectionMat.at<float>(i, 3) * frame.cols);
-                        int top = static_cast<int>(detectionMat.at<float>(i, 4) * frame.rows);
-                        int right = static_cast<int>(detectionMat.at<float>(i, 5) * frame.cols);
-                        int bottom = static_cast<int>(detectionMat.at<float>(i, 6) * frame.rows);
+                        int left = static_cast<int>((detectionMat.at<float>(i, 3) * cropped_frame.cols + cropped_left) / aspect_ratio);
+                        int top = static_cast<int>(detectionMat.at<float>(i, 4) * cropped_frame.rows / aspect_ratio);
+                        int right = static_cast<int>((detectionMat.at<float>(i, 5) * cropped_frame.cols + cropped_left) / aspect_ratio);
+                        int bottom = static_cast<int>(detectionMat.at<float>(i, 6) * cropped_frame.rows / aspect_ratio);
 
                         // Initialize the tracker rectangle
                         tracker_drect = dlib::drectangle(left, top, right, bottom);
+                        cout << tracker_drect << endl;
 
                         // draw rectangle
                         cv::rectangle(frame, cv::Point(left, top), cv::Point(right, bottom), cv::Scalar(0, 0, 255), 2);
