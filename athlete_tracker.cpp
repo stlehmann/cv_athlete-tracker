@@ -94,10 +94,10 @@ int main(int argc, char* argv[]) {
     }
 
     // init the correlation tracker
-    dlib::correlation_tracker tracker;
-    dlib::drectangle tracker_drect;
-    bool tracker_started = false;
-    bool athlete_detected = false;  
+    std::vector<dlib::drectangle> tracked_rects;
+    std::vector<dlib::correlation_tracker> trackers;
+    bool trackers_started = false;
+    bool athlete_detected = false;
 
     // Capture first frame
     while (cap.isOpened()) {
@@ -145,21 +145,17 @@ int main(int argc, char* argv[]) {
 
                         cout << "Athlete detected with confidence " << confidence << endl;
                         
-                        // set flag that athlete has been detected, object detector won't be triggered again
-                        athlete_detected = true;
-
                         // extract all four corners of the bounding box, rescale to original size of the frame
                         int left = static_cast<int>((detectionMat.at<float>(i, 3) * cropped_frame.cols + cropped_left) / aspect_ratio);
                         int top = static_cast<int>(detectionMat.at<float>(i, 4) * cropped_frame.rows / aspect_ratio);
                         int right = static_cast<int>((detectionMat.at<float>(i, 5) * cropped_frame.cols + cropped_left) / aspect_ratio);
                         int bottom = static_cast<int>(detectionMat.at<float>(i, 6) * cropped_frame.rows / aspect_ratio);
 
-                        // Initialize the tracker rectangle
-                        tracker_drect = dlib::drectangle(left, top, right, bottom);
-                        cout << tracker_drect << endl;
+                        // Add to tracked rectangles vector
+                        tracked_rects.push_back(dlib::drectangle(left, top, right, bottom));
 
-                        // draw rectangle
-                        cv::rectangle(frame, cv::Point(left, top), cv::Point(right, bottom), cv::Scalar(0, 0, 255), 2);
+                        // set flag that athlete has been detected, object detector won't be triggered again
+                        athlete_detected = true;
                     }
                 }
             }
@@ -167,28 +163,51 @@ int main(int argc, char* argv[]) {
                 // If autodetect is not activate let the user manually create a rectangle around the athlete that shall be tracked
                 Rect2d r = selectROI(frame);
                 // Initialize the tracker rectangle
-                tracker_drect = dlib::drectangle(r.x, r.y, r.x+r.width, r.y+r.height);
+                tracked_rects.push_back(dlib::drectangle(r.x, r.y, r.x+r.width, r.y+r.height));
                 athlete_detected = true;
             }
         }
         else {
-            if (!tracker_started) {
-                // start the tracker if it hasn't been started, yet
-                tracker.start_track(cv_image<rgb_pixel>(frame), tracker_drect);
-                tracker_started = true;
+            if (!trackers_started) {
+                // Create a vector of correlation trackers for all found athletes
+                for (size_t i=0; i< tracked_rects.size(); ++i) {
+                    dlib::correlation_tracker tracker;
+                    tracker.start_track(cv_image<rgb_pixel>(frame), tracked_rects[i]);
+                    trackers.push_back(tracker);
+                }
+                trackers_started = true;
             }
             else {
-                // Update the tracker with the new frame
-                tracker.update(cv_image<rgb_pixel>(frame));
+                for (size_t i=0; i < trackers.size(); ++i) {
+                    // Update each tracker with the new frame
+                    trackers[i].update(cv_image<rgb_pixel>(frame));
+                    
+                    // Get the tracking result
+                    dlib::rectangle drect = trackers[i].get_position();
+                    tracked_rects[i] = drect;
+                    
+                    // Draw a rectangle around the tracked object
+                    cv::rectangle(
+                        frame,
+                        cv::Point(drect.left(), drect.top()),
+                        cv::Point(drect.right(), drect.bottom()),
+                        cv::Scalar(0, 0, 255),
+                        2
+                    );
 
-                // Get the tracking result
-                tracker_drect = tracker.get_position();
+                    // Add label
+                    cv::putText(
+                        frame,
+                        "Athlete" + std::to_string(i + 1),
+                        cv::Point(drect.left(), drect.top() - 10),
+                        cv::FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        cv::Scalar(0, 0, 255)
+                    );
 
-                // Draw a rectangle around the tracked object
-                cv::rectangle(frame, cv::Point(tracker_drect.left(), tracker_drect.top()), cv::Point(tracker_drect.right(), tracker_drect.bottom()), cv::Scalar(0, 0, 255), 2);
-
-                // Print coordinates
-                cout << "x=" << tracker_drect.left() << ", y=" << tracker_drect.top() << ", width=" << tracker_drect.width() << ", height=" << tracker_drect.height() << endl;
+                    // Print coordinates
+                    cout << "Athlete " << i+1 << ": x=" << tracked_rects[i].left() << ", y=" << tracked_rects[i].top() << ", width=" << tracked_rects[i].width() << ", height=" << tracked_rects[i].height() << endl;
+                }
             }
         }
        
