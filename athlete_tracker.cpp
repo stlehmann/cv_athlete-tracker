@@ -133,11 +133,11 @@ int main(int argc, char* argv[]) {
                 object_detector.setInput(blob);
                 Mat detections = object_detector.forward();
 
-                // Process the output to extract object detections. We only want the one with the highest confidence
+                // Process the output to extract object detections
                 Mat detectionMat(detections.size[2], detections.size[3], CV_32F, detections.ptr<float>());
                 for (int i = 0; i < detectionMat.rows; ++i) {
 
-                    // extract confidence and label from detection matrix
+                    // Extract confidence and label from detection matrix
                     float confidence = detectionMat.at<float>(i, 2);
                     string label = classes[static_cast<int>(detectionMat.at<float>(i, 1))];
 
@@ -145,7 +145,7 @@ int main(int argc, char* argv[]) {
 
                         cout << "Athlete " << i << " detected with confidence " << confidence << endl;
                         
-                        // extract all four corners of the bounding box, rescale to original size of the frame
+                        // Extract all four corners of the bounding box, rescale to original size of the frame
                         int left = static_cast<int>((detectionMat.at<float>(i, 3) * cropped_frame.cols + cropped_left) / aspect_ratio);
                         int top = static_cast<int>(detectionMat.at<float>(i, 4) * cropped_frame.rows / aspect_ratio);
                         int right = static_cast<int>((detectionMat.at<float>(i, 5) * cropped_frame.cols + cropped_left) / aspect_ratio);
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
                         // Add to tracked rectangles vector
                         tracked_rects.push_back(dlib::drectangle(left, top, right, bottom));
 
-                        // set flag that athlete has been detected, object detector won't be triggered again
+                        // Set flag that athlete has been detected, object detector won't be triggered again
                         athlete_detected = true;
                     }
                 }
